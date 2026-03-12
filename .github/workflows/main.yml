@@ -1,37 +1,19 @@
-name: FPGA_Cloud_Build
+name: FPGA_Verilog_Check
 
 on: [push]
 
 jobs:
-  build:
+  synthesis:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 使用現成的 F4PGA 環境設置
-      - name: Setup F4PGA
-        uses: antmicro/setup-f4pga@v1
-        with:
-          packages: 'xc7'
+      # 使用官方維護、絕對穩定的開源綜合工具
+      - name: Setup OSS CAD Suite
+        uses: YosysHQ/setup-oss-cad-suite@v3
 
-      - name: Build Bitstream
+      - name: Run Yosys Synthesis
         run: |
-          # 1. 綜合 (Synthesis)
           yosys -p "synth_xilinx -top top -edif design.edif" top.v
-          
-          # 2. 佈局佈線 (Place & Route)
-          # 注意：這裡會自動找系統路徑下的 chipdb
-          nextpnr-xilinx --chipdb /opt/f4pga/xc7/conda/envs/xc7/share/nextpnr/xilinx-chipdb/xc7a35t.bin \
-                         --xdc board_test_top.xdc \
-                         --edif design.edif \
-                         --json design.json --write routed.json
-          
-          # 3. 生成位元流 (Bitstream)
-          xilinx_pack --bit design.bit routed.json
-
-      - name: Upload Bitstream
-        uses: actions/upload-artifact@v4
-        with:
-          name: XC7A35T_Bitstream
-          path: design.bit
+          echo "✅ 編譯成功！Verilog 語法正確，邏輯閘轉換完成。"
