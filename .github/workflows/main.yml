@@ -7,15 +7,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4  # 升級到 v4
+        uses: actions/checkout@v4
 
-      - name: Build with F4PGA
-        uses: docker://hdlc/nextpnr-xilinx:latest
+      - name: Build Artix-7 Bitstream
+        # 改用這個更穩定的容器環境
+        uses: docker://ghcr.io/hdl/tools/nextpnr/xilinx:latest
         with:
           args: >
             sh -c "
             yosys -p 'synth_xilinx -top top -edif design.edif' top.v &&
-            nextpnr-xilinx --chipdb /usr/share/nextpnr/xilinx-chipdb-xc7a35t.bin \
+            nextpnr-xilinx --chipdb /usr/local/share/nextpnr/xilinx-chipdb/xc7a35t.bin \
                            --xdc board_test_top.xdc \
                            --edif design.edif \
                            --json design.json --write routed.json &&
@@ -23,7 +24,7 @@ jobs:
             "
 
       - name: Upload Bitstream
-        uses: actions/upload-artifact@v4  # 修正這裡：從 v3 改為 v4
+        uses: actions/upload-artifact@v4
         with:
           name: XC7A35T_Bitstream
           path: design.bit
