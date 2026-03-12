@@ -3,25 +3,32 @@ name: FPGA_Cloud_Build
 on: [push]
 
 jobs:
-  build_bitstream:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Build Artix-7 Bitstream
-        # 改用這個更穩定的容器環境
-        uses: docker://ghcr.io/hdl/tools/nextpnr/xilinx:latest
+      # 使用現成的 F4PGA 環境設置
+      - name: Setup F4PGA
+        uses: antmicro/setup-f4pga@v1
         with:
-          args: >
-            sh -c "
-            yosys -p 'synth_xilinx -top top -edif design.edif' top.v &&
-            nextpnr-xilinx --chipdb /usr/local/share/nextpnr/xilinx-chipdb/xc7a35t.bin \
-                           --xdc board_test_top.xdc \
-                           --edif design.edif \
-                           --json design.json --write routed.json &&
-            xilinx_pack --bit design.bit routed.json
-            "
+          packages: 'xc7'
+
+      - name: Build Bitstream
+        run: |
+          # 1. 綜合 (Synthesis)
+          yosys -p "synth_xilinx -top top -edif design.edif" top.v
+          
+          # 2. 佈局佈線 (Place & Route)
+          # 注意：這裡會自動找系統路徑下的 chipdb
+          nextpnr-xilinx --chipdb /opt/f4pga/xc7/conda/envs/xc7/share/nextpnr/xilinx-chipdb/xc7a35t.bin \
+                         --xdc board_test_top.xdc \
+                         --edif design.edif \
+                         --json design.json --write routed.json
+          
+          # 3. 生成位元流 (Bitstream)
+          xilinx_pack --bit design.bit routed.json
 
       - name: Upload Bitstream
         uses: actions/upload-artifact@v4
