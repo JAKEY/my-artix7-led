@@ -1,0 +1,29 @@
+name: FPGA_Cloud_Build
+
+on: [push]
+
+jobs:
+  build_bitstream:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Build with F4PGA
+        uses: docker://hdlc/nextpnr-xilinx:latest
+        with:
+          args: >
+            sh -c "
+            yosys -p 'synth_xilinx -top top -edif design.edif' top.v &&
+            nextpnr-xilinx --chipdb /usr/share/nextpnr/xilinx-chipdb-xc7a35t.bin \
+                           --xdc board_test_top.xdc \
+                           --edif design.edif \
+                           --json design.json --write routed.json &&
+            xilinx_pack --bit design.bit routed.json
+            "
+
+      - name: Upload Bitstream
+        uses: actions/upload-artifact@v3
+        with:
+          name: XC7A35T_Bitstream
+          path: design.bit
